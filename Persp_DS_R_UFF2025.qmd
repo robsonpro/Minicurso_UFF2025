@@ -10,6 +10,11 @@ execute:
 lang: pt
 ---
 
+```{r}
+#| echo: false
+knitr::include_graphics("banner.jpg")
+```
+
 ## Análise exploratória de dados
 
 ### Manipulação de dados e estatísticas descritivas
