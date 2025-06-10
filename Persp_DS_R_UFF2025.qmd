@@ -106,13 +106,13 @@ d_hp
 
 ```{r}
 dados |>
-  slice(27)
+  dplyr::slice(27)
 ```
 
 ```{r}
 dados |>
   select(hp) |>
-  slice(27)
+  dplyr::slice(27)
 ```
 
 ```{r}
@@ -360,6 +360,14 @@ p <- ggplot(dados2, aes(wt, disp, label = car)) +
 
 p + geom_text_repel(size = 3)
 ```
+
+```{r}
+ggplot(data = dados,
+       mapping = aes(x = hp, y = mpg, col = qsec)) +
+  scale_color_viridis_c() +
+  geom_point()
+```
+
 
 ```{r}
 r <- cor(dados)
