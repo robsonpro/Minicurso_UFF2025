@@ -1,0 +1,1070 @@
+---
+title: "Perspectivas em ciências de dados na linguagem R"
+author: "Robson Bruno Dutra Pereira"
+format: html
+editor: visual
+execute:
+  echo: true
+  warning: false
+  message: false
+lang: pt
+---
+
+## Análise exploratória de dados
+
+### Manipulação de dados e estatísticas descritivas
+
+Instalando e carregando pacotes.
+
+```{r}
+install_if_missing_multi <- function(packages) {
+  for (pkg in packages) {
+    if (!require(pkg, character.only = TRUE)) {
+      install.packages(pkg)
+      library(pkg, character.only = TRUE)
+    }
+  }
+}
+
+packages <- c("rstudioapi", "modelsummary", "glmnet", "xgboost", "ranger", "nnet", "dplyr", "ggplot2", "ggrepel", "corrplot", "GGally", "ggridges", "AER", "tidymodels", "finetune", "vip", "fpp3", "zoo", "rpart", "kernlab")
+ 
+install_if_missing_multi(packages)
+```
+
+Carregando pacotes necessários às análises (é o que faço se não quero usar a função anterior).
+
+```{r}
+library(dplyr)
+library(modelsummary)
+```
+
+Carregando o conjunto de dados `mtcars`. 
+
+```{r}
+dados <- mtcars
+# ?mtcars
+
+head(dados)
+# https://rstudio-pubs-static.s3.amazonaws.com/61800_faea93548c6b49cc91cd0c5ef5059894.html
+```
+
+Número de dimensões do *data frame* (linhas e colunas).
+
+```{r}
+dim(dados)
+```
+Acessando coluna de interesse.
+
+```{r}
+hp <- dados$hp
+hp
+```
+
+Indexando colunas.
+
+```{r}
+dados[,4]
+```
+
+Indexando linhas.
+
+```{r}
+porsche <- dados[27,]
+porsche
+```
+
+Indexando linhas e colunas.
+
+```{r}
+dados[27,4]
+```
+
+```{r}
+dados_red <- dados[27:29, 4:5]
+dados_red
+```
+
+```{r}
+dados[c(27,29), 4:5]
+```
+
+Repetindo operações anteriores via `dplyr`.
+
+```{r}
+d_hp <- dados |>
+  select(hp)
+d_hp
+
+# dados |>
+#   pull(hp)
+```
+
+```{r}
+dados |>
+  slice(27)
+```
+
+```{r}
+dados |>
+  select(hp) |>
+  slice(27)
+```
+
+```{r}
+dados |>
+  select(hp,drat) |>
+  slice(27:29) # slice(27,29)
+```
+
+Vislumbrando os dados.
+
+```{r}
+glimpse(dados)
+```
+
+Estatísticas descritivas.
+
+```{r}
+datasummary_skim(dados)
+# summary(dados)
+```
+
+Conjunto de dados `penguins`. 
+
+```{r}
+glimpse(penguins)
+```
+
+Resumo das variáveis numéricas com `datasummary_skim`.
+
+```{r}
+datasummary_skim(penguins, 
+                 type = "numeric")
+```
+
+Caso queira avaliar apenas as variáveis categóricas.
+
+```{r}
+datasummary_skim(penguins, 
+                 type = "categorical")
+```
+
+Voltando aos carros. Avaliando a correlação entre as variáveis.
+
+```{r}
+cor(dados) |>
+  round(2)
+```
+
+```{r}
+cor(dados, 
+    method = "spearman") |>
+  round(2)
+```
+
+```{r}
+datasummary_correlation(dados)
+```
+
+Correlação para o conjunto de dados `penguins`.
+
+```{r}
+# cor(penguins) # dá erro devido as variáveis categóricas
+
+penguins |>
+  select(where(is.numeric)) |>
+  cor(use="pairwise.complete.obs")
+```
+
+Conjunto de dados iris.
+
+```{r}
+glimpse(iris)
+```
+
+```{r}
+levels(iris$Species)
+```
+
+Seleção de variáveis de forma inteligente.
+
+```{r}
+sepal <- iris |> 
+  select(starts_with("Sepal"))
+sepal
+```
+
+Excluindo coluna.
+
+```{r}
+iris |>
+  select(!Species)
+```
+
+Estatísticas de variáveis contínuas por categoria (neste caso espécie).
+
+```{r}
+iris |>
+  group_by(Species) |>
+  summarise(xbar_c_pet = mean(Petal.Length),
+            sd_c_pet = sd(Petal.Length))
+```
+
+Para todas as variáveis não agrupadas use `everything()`.
+
+```{r}
+ iris |>
+  group_by(Species) |>
+  summarise(across(everything(), list(mean=mean, sd=sd)))
+```
+
+```{r}
+penguins |>
+  group_by(species, island) |>
+  summarize(qtd = n(), .groups = "drop")
+```
+
+```{r}
+penguins |>
+  group_by(species, island) |>
+  summarize(prop = n()/nrow(penguins), 
+            .groups = "drop")
+```
+
+```{r}
+datasets::penguins |>
+  group_by(species, island) |>
+  summarize(mean_mass = mean(body_mass, na.rm=T),
+            sd_mass = sd(body_mass, na.rm=T), 
+            .groups = "drop")
+
+penguins <- datasets::penguins
+```
+
+Criando novas variáveis com `mutate`.
+
+```{r}
+dados2 <- dados |>
+  mutate(hp_wt = hp/wt)
+head(dados2)
+```
+
+```{r}
+dados2 |>
+  select(qsec, hp_wt) |>
+  cor()
+```
+
+Conjunto de dados `starwars`.
+
+```{r}
+glimpse(starwars)
+# ?starwars
+```
+Calculando imc com mutate
+
+```{r}
+sw_ <- starwars |>
+  mutate(imc = mass/(height/100)^2)
+
+sw_ |>
+  select(name, imc) |>
+  head()
+```
+
+Filtrando segundo condição de interesse.
+
+```{r}
+sobrepeso <- sw_ |>
+  select(name, imc) |>
+  filter(imc >= 25 & imc < 30)
+
+sobrepeso
+```
+
+Separando dados da espécie "versicolor".
+
+```{r}
+versicolor <- iris |>
+  filter(Species == "versicolor") |>
+  select(!Species)
+head(versicolor)
+```
+
+```{r}
+iris |>
+  filter(Species == "versicolor") |>
+  select(!starts_with("S"))
+```
+
+```{r}
+penguins |>
+  group_by(species) |>
+  summarise(mean(body_mass, na.rm = T))
+```
+
+```{r}
+penguins |>
+  group_by(species) |>
+  filter(body_mass > mean(body_mass, na.rm = T))
+```
+
+Análise bivariada de variáveis qualitativas.
+
+```{r}
+penguins |>
+  select(species, island) |>
+  table()
+```
+
+```{r}
+penguins |>
+  select(species, island) |>
+  table()/nrow(penguins)
+```
+
+```{r}
+dados |>
+  select(gear, carb) |>
+  table()
+```
+
+### Análise gráfica
+
+```{r}
+library(ggplot2)
+library(ggrepel)
+library(corrplot)
+library(GGally)
+library(ggridges)
+```
+
+```{r}
+theme_set(theme_bw())
+ggplot(data = dados,
+       mapping = aes(x = hp, y = mpg)) +
+  geom_point()
+```
+
+```{r}
+dados2 <- dados2 |>
+  mutate(car = rownames(dados2))
+
+p <- ggplot(dados2, aes(wt, disp, label = car)) +
+  geom_point(color = "blue")
+
+p + geom_text_repel(size = 3)
+```
+
+```{r}
+r <- cor(dados)
+
+corrplot(r, 
+         method = "color",
+         type = "upper",
+         hclust.method = "centroid",
+         order = "hclust")
+```
+
+```{r}
+ggplot(data = dados,
+       mapping = aes(x = wt, 
+                     y = mpg, 
+                     size = qsec,
+                     col = factor(am))) +
+  geom_point(alpha = .5)
+```
+
+```{r}
+penguins |>
+  ggplot(aes(x = body_mass, y = flipper_len, 
+             col = species,
+             pch = species)) +
+  geom_point(alpha = .5)
+```
+
+```{r}
+penguins |>
+  na.exclude() |>
+  ggplot(aes(x = body_mass, y = flipper_len, 
+             col = species,
+             pch = species)) +
+  facet_grid(cols = vars(sex)) + 
+  geom_point()
+```
+
+```{r}
+penguins |>
+  na.exclude() |>
+  ggplot(aes(x = body_mass, y = flipper_len, 
+             col = species,
+             pch = species)) +
+  facet_grid(sex ~ island) + 
+  geom_point() +
+  scale_color_brewer(palette="Set1")
+```
+
+```{r}
+ggplot(data = dados2,
+       aes(x = hp_wt, y = qsec)) +
+  geom_point() +
+  geom_smooth(method = lm, se = F)
+```
+
+```{r}
+ggplot(iris, aes(x=Sepal.Length,
+                 y=Petal.Length,
+                 col = Species,
+                 pch = Species)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y~x) +
+  labs(x = "comprimento da sépala",
+       y = "Comprimento da pétala",
+       col = "Espécie",
+       pch = "Espécie",
+       title = "Reg. linear para comp. da pétala em função do comp. da Sépala",
+       subtitle = "para três espécies de orquídeas")
+```
+
+```{r}
+ggplot(iris, aes(x=Petal.Length,
+                 y=Petal.Width)) +
+  geom_point(aes(col = Species,
+                 pch = Species)) +
+  geom_smooth(method = "lm", 
+              formula = y~x, 
+              col = "black")
+```
+
+```{r}
+ggplot(penguins, aes(x = body_mass,
+                     fill = species)) +
+  geom_histogram(alpha = .5, position = 'identity')
+```
+
+```{r}
+ggplot(penguins, aes(x = body_mass,
+                     col = species)) +
+  geom_density(position = 'identity')
+```
+
+
+```{r}
+ggplot(penguins |> na.omit(), aes(x = bill_dep,
+                     fill = sex)) +
+  geom_histogram(alpha = .5, position = 'identity') +
+  facet_grid(rows = vars(species))
+```
+
+```{r}
+ggplot(penguins |> 
+         na.omit(), 
+       aes(x = bill_dep,
+           y = species,
+           fill = sex)) +
+  geom_density_ridges(alpha = .5)
+```
+
+Boxplots.
+
+```{r}
+ggplot(penguins |> na.omit(), 
+       aes(x = sex,
+           y = bill_dep,
+           col = sex)) +
+  facet_grid(~species) +
+  geom_boxplot() +
+  geom_jitter(alpha = .2, width = .1)
+```
+
+```{r}
+ggplot(penguins |> na.omit(), 
+       aes(x = species,
+           y = bill_dep,
+           col = species)) +
+  facet_grid(~sex) +
+  geom_boxplot() +
+  geom_jitter(alpha = .2, width = .1)
+```
+
+Matriz de gráficos aos pares de variáveis.
+
+```{r}
+ggpairs(dados[,1:7], progress = F)
+```
+
+```{r}
+ggpairs(iris |> na.omit(), 
+        aes(color = Species, 
+            alpha =.5),
+        progress = F)
+```
+
+Gráficos de barras.
+
+```{r}
+bar <- mpg |>
+  count(class) |> 
+  ggplot(aes(x = reorder(class, -n), y = n, fill = class),
+         show.legend = FALSE) +
+  geom_bar(stat="identity", width = 1) +
+  labs(x = "tipo", y = "quantidade") + 
+  theme(aspect.ratio = 1)
+  
+
+bar #+ coord_flip()
+```
+
+```{r}
+bar + coord_polar()
+```
+
+### Aprendizado supervisionado
+
+### Regressão linear múltipla para preço do Petróleo em função do grau de pureza e teor de enxofre
+
+```{r}
+library(AER) # USCrudes
+```
+
+Dados de purza, teor de enxofre e preço de 99 poços de Petróleo dos EUA.
+
+```{r}
+data("USCrudes") # sempre que usar dados de um pacote específico
+glimpse(USCrudes)
+# ?USCrudes
+```
+
+```{r}
+ggpairs(USCrudes, progress = F)
+```
+
+Seprando dados de treino e teste.
+
+```{r}
+treino <- sample(nrow(USCrudes),
+                 0.8*nrow(USCrudes), 
+                 replace = F)
+
+dados.treino <- USCrudes[treino,]
+dados.teste <- USCrudes[-treino,]
+```
+
+Modelo de regressão múltipla.
+
+```{r}
+lm1 <- lm(price ~ scale(gravity) + scale(sulphur), dados.treino)
+summary(lm1)
+```
+
+Métricas de desempenho para avaliar o modelo.
+
+```{r}
+metrics <- function(obs, pred) {
+  
+  RSE <- sum((obs - pred)^2)
+  SST <- sum((obs - mean(obs))^2)
+  R2 <- 1 - RSE/SST 
+  
+  MAE <-  mean(abs(obs - pred))
+  
+  RMSE <- sqrt(mean((obs - pred)^2))
+  
+  return(
+    data.frame(RMSE = RMSE,
+               MAE = MAE,
+               R2 = R2))
+}
+```
+
+```{r}
+pred <- predict(lm1, newdata = dados.teste)
+
+metrics(dados.teste$price, pred)
+```
+
+```{r}
+xs <- seq(min(USCrudes$gravity), max(USCrudes$gravity), length = 20)
+ys <- seq(min(USCrudes$sulphur), max(USCrudes$sulphur), length = 20)
+xys <- expand.grid(xs,ys)
+colnames(xys) <- c("gravity", "sulphur")
+
+zs <- matrix(predict(lm1, xys), nrow = length(xs))
+
+n.cols <- 100
+palette <- colorRampPalette(c("gold", "chartreuse4"))(n.cols)
+zfacet <- zs[-1, -1] + zs[-1, -20] + zs[-20, -1] + zs[-20, -20]
+facetcol <- cut(zfacet, n.cols)
+
+par(mfrow = c(1,1))
+p1 <- persp(x=xs, y=ys, z=zs, theta=-45, phi=30, ticktype='detailed', 
+            xlab="gravity", ylab="sulphur", zlab="price", col = palette[facetcol])
+
+obs <- with(USCrudes[-treino,], trans3d(gravity,sulphur,price,p1))
+
+pred <- with(USCrudes[-treino,], trans3d(gravity,sulphur,predict(lm1,newdata = USCrudes[-treino,]), p1))
+
+points(obs, col = "red", pch = 16)
+segments(obs$x, obs$y, pred$x, pred$y)
+```
+
+### Usando pacote tidymodels para testar distintos modelos
+
+```{r}
+library(tidymodels) 
+library(finetune) # para grid search
+```
+
+```{r}
+set.seed(16)
+dados_split <- initial_split(USCrudes, 
+                              prop = 0.75)
+  
+dados_train <- training(dados_split)
+dados_test  <- testing(dados_split)
+
+set.seed(17)
+dados_folds <- 
+  vfold_cv(v = 5, dados_train)
+```
+
+```{r}
+normalized_rec <- 
+  recipe(price ~ ., 
+         data = dados_train) |> 
+  step_normalize(all_numeric_predictors())
+```
+
+```{r}
+linear_reg_spec <- 
+  linear_reg(penalty = tune(), mixture = tune()) |> 
+  set_engine("glmnet")
+
+rforest_spec <- rand_forest(mtry = tune(), min_n = tune(), trees = tune()) |> 
+  set_engine("ranger") |> 
+  set_mode("regression")
+
+xgb_spec <- # evolution of GBM
+  boost_tree(tree_depth = tune(), learn_rate = tune(), loss_reduction = tune(), 
+             min_n = tune(), sample_size = tune(), trees = tune()) |> 
+  set_engine("xgboost") |> 
+  set_mode("regression")
+
+nnet_spec <- 
+  mlp(hidden_units = tune(), penalty = tune(), epochs = tune()) |> 
+  set_engine("nnet", MaxNWts = 2600) |> 
+  set_mode("regression")
+
+nnet_param <- 
+  nnet_spec |> 
+  extract_parameter_set_dials() |> 
+  update(hidden_units = hidden_units(c(1, 27)))
+```
+
+```{r}
+normalized <- 
+  workflow_set(
+    preproc = list(normalized = normalized_rec), 
+    models = list(linear_reg = linear_reg_spec,
+                  rforest = rforest_spec,
+                  neural_network = nnet_spec)
+  )
+normalized
+```
+
+```{r}
+all_workflows <- 
+  bind_rows(normalized) |> 
+  # Make the workflow ID's a little more simple: 
+  mutate(wflow_id = gsub("(simple_)|(normalized_)", "", wflow_id))
+all_workflows
+```
+
+```{r}
+race_ctrl <-
+  control_race(
+    save_pred = TRUE,
+    parallel_over = "everything",
+    save_workflow = TRUE
+  )
+
+race_results <-
+  all_workflows |>
+  workflow_map(
+    "tune_race_anova",
+    seed = 1503,
+    resamples = dados_folds,
+    grid = 25,
+    control = race_ctrl
+  )
+```
+
+```{r}
+collect_metrics(race_results) |> 
+  filter(.metric == "rmse") |>
+  arrange(mean)
+```
+
+```{r}
+collect_metrics(race_results) |> 
+  filter(.metric == "rsq") |>
+  arrange(desc(mean))
+```
+
+```{r}
+IC_rmse <- collect_metrics(race_results) |> 
+  filter(.metric == "rmse") |> 
+  group_by(wflow_id) |>
+  filter(mean == min(mean)) |>
+  group_by(wflow_id) |> 
+  arrange(mean) |> 
+  ungroup()
+
+IC_r2 <- collect_metrics(race_results) |> 
+  filter(.metric == "rsq") |> 
+  group_by(wflow_id) |>
+  filter(mean == max(mean)) |>
+  group_by(wflow_id) |> 
+  arrange(desc(mean)) |> 
+  ungroup() 
+
+IC2 <- bind_rows(IC_rmse, IC_r2)
+
+ggplot(IC2, aes(x = factor(wflow_id, levels = unique(wflow_id)), y = mean)) +
+  facet_wrap(~.metric, scales = "free") +
+  geom_point(stat="identity", aes(color = wflow_id), pch = 1) +
+  geom_errorbar(stat="identity", aes(color = wflow_id, 
+                                     ymin=mean-1.96*std_err,
+                                     ymax=mean+1.96*std_err), width=.2) + 
+  labs(y = "", x = "method") + theme_bw() +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+### Classificação de espécies de árvores frutíferas considerando características dimensionais de folhas
+
+```{r}
+folhas <- read.csv("folhas.csv", header = T)
+head(folhas)
+```
+
+```{r}
+glimpse(folhas)
+```
+
+```{r}
+datasummary_skim(folhas)
+```
+
+```{r}
+ggpairs(folhas, aes(col = especie), progress = F)
+```
+
+```{r}
+set.seed(16)
+dados_split2 <- initial_split(folhas, 
+                              prop = 0.75)
+  
+dados_train2 <- training(dados_split2)
+dados_test2  <- testing(dados_split2)
+
+set.seed(17)
+dados_folds2 <- 
+  vfold_cv(v = 5, dados_train2)
+```
+
+```{r}
+normalized_rec <- 
+  recipe(especie ~ ., 
+         data = dados_train2) |> 
+  step_normalize(all_numeric_predictors())
+```
+
+Métodos de classificação.
+
+```{r}
+lreg_spec <- 
+  multinom_reg(penalty = tune(), mixture = tune()) |> 
+  set_engine("glmnet")
+
+tree_spec <- decision_tree(tree_depth = tune(), min_n = tune(), cost_complexity = tune()) |> 
+  set_engine("rpart") |> 
+  set_mode("classification")
+
+rforest_spec <- rand_forest(mtry = tune(), min_n = tune(), trees = tune()) |> 
+  set_engine("ranger") |> 
+  set_mode("classification")
+
+svm_r_spec <- 
+  svm_rbf(cost = tune(), rbf_sigma = tune()) |> 
+  set_engine("kernlab") |> 
+  set_mode("classification")
+
+svm_p_spec <- 
+  svm_poly(cost = tune(), degree = tune()) |> 
+  set_engine("kernlab") |> 
+  set_mode("classification")
+```
+
+Definindo o `worflow`, o qual contém os modelos e a receita.
+
+```{r}
+normalized2 <- 
+  workflow_set(
+    preproc = list(normalized = normalized_rec), 
+    models = list(lreg = lreg_spec,
+                  tree = tree_spec,
+                  rforest = rforest_spec,
+                  SVM_radial = svm_r_spec, 
+                  SVM_poly = svm_p_spec
+                  )
+  )
+normalized2
+```
+
+Fazendo modificação no nome dos modelos para simplificá-los.
+
+```{r}
+all_workflows2 <- 
+  bind_rows(normalized2) |> 
+  # Make the workflow ID's a little more simple: 
+  mutate(wflow_id = gsub("(simple_)|(normalized_)", "", wflow_id))
+all_workflows2
+```
+
+*Grid search* e validação cruzada.
+
+```{r}
+race_ctrl2 <-
+  control_race(
+    save_pred = TRUE,
+    parallel_over = "everything",
+    save_workflow = TRUE
+  )
+
+race_results2 <-
+  all_workflows2 |>
+  workflow_map(
+    "tune_race_anova",
+    seed = 1503,
+    resamples = dados_folds2,
+    grid = 25,
+    control = race_ctrl2
+  )
+```
+
+Extraindo métricas para avaliar os resultados da validação cruzada.
+
+```{r}
+collect_metrics(race_results2) |> 
+  filter(.metric == "accuracy") |>
+  arrange(desc(mean))
+```
+
+```{r}
+collect_metrics(race_results2) |> 
+  filter(.metric == "roc_auc") |>
+  arrange(desc(mean))
+```
+
+
+Visualizando desempenho dos métodos.
+
+```{r}
+IC_rmse <- collect_metrics(race_results2) |> 
+  filter(.metric == "roc_auc") |> 
+  group_by(wflow_id) |>
+  filter(mean == min(mean)) |>
+  group_by(wflow_id) |> 
+  arrange(desc(mean)) |> 
+  ungroup()
+
+IC_r2 <- collect_metrics(race_results2) |> 
+  filter(.metric == "accuracy") |> 
+  group_by(wflow_id) |>
+  filter(mean == max(mean)) |>
+  group_by(wflow_id) |> 
+  arrange(desc(mean)) |> 
+  ungroup() 
+
+IC <- bind_rows(IC_rmse, IC_r2)
+
+ggplot(IC, aes(x = factor(wflow_id, levels = unique(wflow_id)), y = mean)) +
+  facet_wrap(~.metric, scales = "free") +
+  geom_point(stat="identity", aes(color = wflow_id), pch = 1) +
+  geom_errorbar(stat="identity", aes(color = wflow_id, 
+                                     ymin=mean-1.96*std_err,
+                                     ymax=mean+1.96*std_err), width=.2) + 
+  labs(y = "", x = "method") + theme_bw() +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+```{r}
+best_roc_auc <- 
+  race_results2 |> 
+  extract_workflow_set_result("lreg") |> 
+  select_best(metric = "roc_auc")
+best_roc_auc 
+```
+
+Previsão e desempenho para dados de teste.
+
+Modelo final.
+
+```{r}
+last_mod <- 
+  multinom_reg(penalty = 1.211528e-08, mixture = 0.6833333) |>
+  set_engine("glmnet",
+             importance = "impurity") |> 
+  set_mode("classification")
+
+last_workflow <- 
+  extract_workflow(all_workflows2, "lreg") |> 
+  update_model(last_mod)
+
+set.seed(345)
+last_fit <- 
+  last_workflow |>
+  last_fit(dados_split2)
+
+last_fit
+```
+
+```{r}
+last_fit |>
+  collect_metrics()
+```
+
+Importância das variáveis no modelo.
+
+```{r}
+library(vip)
+last_fit |>
+  extract_fit_parsnip() |> 
+  vip(num_features = 20) + theme_bw()
+```
+
+## Séries temporais
+
+```{r}
+library(fpp3)
+library(zoo)
+```
+
+Leitura dos dados.
+
+```{r}
+voosbr <- read.csv("voosbr_ts.csv", header = T)
+```
+
+Transformando dados em série temporal.
+
+```{r}
+voosbr_ts <- voosbr |> 
+  mutate(data = yearmonth(paste(data, " 01"), format = "%Y %b %d")) |>
+  as_tsibble(index = data)
+```
+
+Plotando até ano 2019.
+
+```{r}
+voosbr_ts |>
+  filter(year(data)<2020) |>
+  autoplot(Passageiros) +
+  labs(title="Passageiros em vôos no Brasil", x="")
+```
+
+Gráfico sazonal.
+
+```{r}
+voosbr_ts |> 
+  filter(year(data)<2020) |>
+  gg_season(Passageiros) + labs(x="", y = "")
+```
+
+Decomposição clássifca multiplicativa.
+
+```{r}
+voosbr_ts |>
+  filter(year(data)<2020) |>
+  model(
+    classical_decomposition(Passageiros, type = "multiplicative")
+  ) |>
+  components() |>
+  autoplot() +
+  labs(title = "Decomposição clássica multiplicativa da série Passageiros")
+```
+
+Variação sazonal da série de log(passageiros) em vôos do Brasil e correlogramas de ACF e PACF.
+
+```{r}
+voosbr_ts  |>
+  filter(year(data)<2020) |>
+  gg_tsdisplay(difference(log(Passageiros), 12),
+               plot_type='partial', lag=36) +
+  labs(title="log(Passageiros) de vôos no Brasil: Variação sazonal", y="")
+```
+
+Série transformada com diferenciação simples e sazonal, além dos correlogramas de ACF e PACF.
+
+```{r}
+voosbr_ts  |>
+  filter(year(data)<2020) |>
+  gg_tsdisplay(difference(log(Passageiros), 12) |> difference(),
+               plot_type='partial', lag=36) +
+  labs(title="Variação dupla", y="")
+```
+
+Testando modelos.
+
+```{r}
+fit6 <- voosbr_ts  |>
+  filter(year(data)<2020) |>
+  model(
+    arima011011 = ARIMA(log(Passageiros) ~ pdq(0,1,1) + PDQ(0,1,1)),
+    arima110210 = ARIMA(log(Passageiros) ~ pdq(1,1,0) + PDQ(2,1,0)),
+    auto = ARIMA(log(Passageiros), stepwise = FALSE, approx = FALSE)
+  )
+
+fit6 |> pivot_longer(everything(), names_to = "Modelo",
+                     values_to = "Ordem")
+```
+
+Resultado dos três modelos.
+
+```{r}
+glance(fit6) |> arrange(AICc) |> select(.model:BIC)
+```
+
+Coeficientes do modelo automático.
+
+```{r}
+report(fit6 |> select(auto))
+```
+
+Gráficos de resíduos.
+
+```{r}
+fit6 |> select(auto) |> gg_tsresiduals(lag=36)
+```
+
+Teste de Ljung-Box para os resíduos do modelo.
+
+```{r}
+augment(fit6) |>
+  filter(.model == "auto") |>
+  features(.innov, ljung_box, lag=24, dof=3)
+```
+
+Previsão 3 anos à frente.
+
+```{r}
+forecast(fit6, h=36) |>
+  filter(.model=='auto') |>
+  autoplot(voosbr_ts |>
+  filter(year(data)<2020)) +
+  labs(title = "Passageiros em vôos do Brasil",
+       y="Passageiros")
+```
+

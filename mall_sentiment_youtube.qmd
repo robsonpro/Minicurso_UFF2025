@@ -1,0 +1,53 @@
+---
+title: "Análise de sentimentos com `mall`"
+author: "Robson"
+format: html
+editor: visual
+---
+
+## Análise de comentários de vídeos do youtube
+
+```{r}
+library(mall)
+library(dplyr)
+```
+
+```{r}
+dados <- read.csv("comments_tol.csv", header = T)
+head(dados)
+```
+
+Análise de sentimentos.
+
+```{r}
+dados |>
+  select(simpleText) |>
+  llm_sentiment(simpleText)
+```
+
+```{r}
+dados |>
+  select(simpleText) |>
+  llm_summarize(simpleText, max_words = 5)
+```
+
+```{r}
+dados |>
+  select(simpleText) |>
+  llm_classify(simpleText, c("criticism", "compliment", "suggestion", "question", "answer"))
+```
+
+```{r}
+my_prompt <- paste(
+  "Answer with only one word",
+  "Acceptable words are: 'criticism', 'compliment', 'suggestion', 'question', 'answer'.",
+  "Please, pay attention in the following tips:",
+  "'question' finishes with '?'. If you see the words 'como' or 'qual', and '?', probably it is a 'question', not a 'suggestion'",
+  "'answear' is a reply to the audience from the author of the video, generally has an acknowledgement or explanation.",
+  "Answer this about the following text, what is the main aim of the comment?:"
+)
+
+dados |>
+  select(simpleText) |>
+  llm_custom(simpleText, my_prompt)
+```

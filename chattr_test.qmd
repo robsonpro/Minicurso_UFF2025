@@ -1,0 +1,32 @@
+---
+title: "Teste chattr LLM"
+author: "Robson"
+format: html
+editor: visual
+---
+
+## Teste mpg
+
+```{r}
+library(chattr)
+```
+
+```{r}
+chattr_use("ollama")
+```
+
+```{r}
+# chattr_use()
+```
+
+```{r}
+# Sys.setenv(DEEPSEEK_API_KEY = "sk-eb7d5fa140c94eac8c5b62a71f96f67e")
+# 
+#   my_chat <- ellmer::chat_deepseek()
+#   chattr_use(my_chat)
+```
+
+```{r}
+chattr_app()
+```
+
