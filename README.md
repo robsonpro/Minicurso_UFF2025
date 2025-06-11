@@ -3,7 +3,9 @@
 ## Referências para análise exploratória de dados e análise gráfica:
 
 https://pt.r4ds.hadley.nz/
+
 https://ggplot2-book.org/
+
 https://dplyr.tidyverse.org/
 
 ## Livro sobre pacote tidymodels para machine learning:
@@ -26,6 +28,9 @@ https://quarto.org/docs/gallery/
 https://robsonpro.github.io/Minicurso_UFF2025/Persp_DS_R_UFF2025
 
 ## Meus books (em construção)
+
 https://robsonpro.github.io/MOE/
+
 https://robsonpro.github.io/Previsao_book/
+
 https://robsonpro.github.io/Aprendizado_Supervisionado_Book/
