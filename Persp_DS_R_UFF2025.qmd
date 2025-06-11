@@ -532,6 +532,12 @@ bar #+ coord_flip()
 bar + coord_polar()
 ```
 
+```{r}
+ggplot(penguins, aes(x = species, 
+             fill = island)) +
+  geom_bar()
+```
+
 ### Aprendizado supervisionado
 
 ### Regressão linear múltipla para preço do Petróleo em função do grau de pureza e teor de enxofre
