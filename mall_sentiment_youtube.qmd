@@ -17,12 +17,17 @@ dados <- read.csv("comments_tol.csv", header = T)
 head(dados)
 ```
 
+```{r}
+#https://ollama.com/download/windows
+ollamar::pull("llama3.2")
+```
+
 Análise de sentimentos.
 
 ```{r}
 dados |>
   select(simpleText) |>
-  llm_sentiment(simpleText)
+  llm_sentiment(col = simpleText)
 ```
 
 ```{r}
